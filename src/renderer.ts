@@ -1,39 +1,22 @@
-/**
- * This file will automatically be loaded by webpack and run in the "renderer" context.
- * To learn more about the differences between the "main" and the "renderer" context in
- * Electron, visit:
- *
- * https://electronjs.org/docs/latest/tutorial/process-model
- *
- * By default, Node.js integration in this file is disabled. When enabling Node.js integration
- * in a renderer process, please be aware of potential security implications. You can read
- * more about security risks here:
- *
- * https://electronjs.org/docs/tutorial/security
- *
- * To enable Node.js integration in this file, open up `main.js` and enable the `nodeIntegration`
- * flag:
- *
- * ```
- *  // Create the browser window.
- *  mainWindow = new BrowserWindow({
- *    width: 800,
- *    height: 600,
- *    webPreferences: {
- *      nodeIntegration: true
- *    }
- *  });
- * ```
- */
-
-// Inside src/renderer.ts
+// 1. Import the CSS file so Webpack can bundle it.
 import './index.css';
 
-console.log('👋 This message is being logged by "renderer.ts", included via webpack');
+// Define the electronAPI object on the window for TypeScript
+declare global {
+  interface Window {
+    electronAPI: {
+      onHistoryUpdate: (callback: (history: any[]) => void) => void;
+    };
+  }
+}
 
-const editor = document.getElementById('markdown-input');
-editor.addEventListener('keyup', (event) => {
-  const content = (event.target as HTMLTextAreaElement).value;
-  console.log(content);
-  // Here you would add logic to convert markdown to HTML and display it
+// 2. Wait for the DOM to be fully loaded before running our script.
+window.addEventListener('DOMContentLoaded', () => {
+  console.log('Renderer is loaded and DOM is ready!');
+
+  // Now that the DOM is ready, we can safely set up our listener.
+  window.electronAPI.onHistoryUpdate((history) => {
+    console.log('Received history from the main process:', history);
+    // In the next module, we'll render this data to the screen!
+  });
 });
