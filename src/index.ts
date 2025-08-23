@@ -1,12 +1,8 @@
-// Radha Krishna
 import { app, BrowserWindow, clipboard, ipcMain } from 'electron';
 import path from 'path';
-// import { AnalysisResult, analyzeText } from './analysis';
-// import Store from 'electron-store';
 import type Store from 'electron-store';
 import { Worker } from 'worker_threads';
 import { AnalysisResult } from './analysis';
-import { timeStamp } from 'console';
 
 declare const MAIN_WINDOW_WEBPACK_ENTRY: string;
 declare const MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY: string;
@@ -81,27 +77,27 @@ app.on('ready', () => {
   });
 
   // SEARCH
-  ipcMain.on('search-in-page', (event, text) => {
-    const focusedWindow = BrowserWindow.getFocusedWindow();
-    if (focusedWindow) {
-      if (text) {
-        focusedWindow.webContents.findInPage(text);
-      } else {
-        focusedWindow.webContents.stopFindInPage('clearSelection');
-      }
-    }
-  });
+  // ipcMain.on('search-in-page', (event, text) => {
+  //   const focusedWindow = BrowserWindow.getFocusedWindow();
+  //   if (focusedWindow) {
+  //     if (text) {
+  //       focusedWindow.webContents.findInPage(text);
+  //     } else {
+  //       focusedWindow.webContents.stopFindInPage('clearSelection');
+  //     }
+  //   }
+  // });
 
   // PIN
-    // ipcMain.on('toggle-pin-status', (event, timestamp) => {
-    //     const history = getStore().get('clipboardHistory');
-    //     const item = history.find(i => i.timestamp === timestamp);
-    //     if (item) {
-    //         item.isPinned = !item.isPinned; // Flip the boolean
-    //     }
-    //     getStore().set('clipboardHistory', history);
-    //     sendHistoryToRenderer(mainWindow); // Send update to UI
-    // });
+    ipcMain.on('toggle-pin-status', (event, timestamp) => {
+        const history = getStore().get('clipboardHistory');
+        const item = history.find(i => i.timestamp === timestamp);
+        if (item) {
+            item.isPinned = !item.isPinned; // Flip the boolean
+        }
+        getStore().set('clipboardHistory', history);
+        sendHistoryToRenderer(mainWindow); // Send update to UI
+    });
 
     // DELETE
     ipcMain.on('delete-clip', (event, timestamp) => {
@@ -117,6 +113,11 @@ app.on('ready', () => {
     const currentText = clipboard.readText();
     if (currentText.trim() !== '' && currentText !== lastCopiedText) {
       lastCopiedText = currentText;
+
+        const history = getStore().get('clipboardHistory');
+        if (history.length > 0 && history[0].text === currentText) {
+            return; // Exit if this is a duplicate of the most recent item
+        }
       const textToAnalyze = currentText;
 
       const worker = new Worker(path.join(__dirname, 'analysis.worker.js'));

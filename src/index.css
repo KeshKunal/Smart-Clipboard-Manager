@@ -11,16 +11,25 @@ h1 {
   text-align: center;
 }
 
+/* Search Bar */
+.search-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin-bottom: 15px;
+  width: 100%;
+}
 
 #search-box {
   width: 100%;
-  padding: 8px;
-  margin-bottom: 15px;
-  box-sizing: border-box; /* Important for padding and width */
+  padding: 8px 35px 8px 12px;  /* Increased right padding */
+  margin-bottom: 0;            /* Remove bottom margin */
+  box-sizing: border-box;
   background-color: #21252b;
   color: #abb2bf;
   border: 1px solid #3b4048;
   border-radius: 6px;
+  height: 36px;
 }
 
 .history-item {
@@ -34,10 +43,41 @@ h1 {
   transition: background-color 0.2s ease-in-out;
     display: flex; 
   align-items: flex-start;
-  position: relative;  /* Ensure this is present */
-  padding-right: 40px; /* Make room for the menu button */
+  position: relative; 
+  padding-right: 40px; 
 }
 
+#clear-search-btn {
+  position: absolute;
+  right: 8px;              /* Adjust position */
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #828a96;
+  cursor: pointer;
+  font-size: 18px;        /* Slightly larger */
+  padding: 4px;           /* Smaller padding */
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;           /* Smaller width */
+  height: 20px;          /* Smaller height */
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+#clear-search-btn:hover {
+  color: #abb2bf;
+  background-color: rgba(171, 178, 191, 0.1);
+}
+
+#clear-search-btn.hidden {
+  display: none;
+}
+
+/* History */
 .history-item:hover {
   background-color: #4b515c;
 }
@@ -70,6 +110,7 @@ h1 {
   cursor: pointer;
 }
 
+/* Menu  */
 .menu-button {
   position: absolute;
   top: 8px;
@@ -111,7 +152,6 @@ h1 {
     transform: translateY(0);
 }
 
-/* Add active state for menu button */
 .menu-button.active {
     background-color: #3b4048;
     opacity: 1;
@@ -134,4 +174,23 @@ h1 {
 
 .history-item:hover .menu-button {
   opacity: 1;
+}
+
+.copy-notification {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #98c379; /* Green color */
+  color: #21252b; /* Dark text */
+  padding: 8px 16px;
+  border-radius: 12px;
+  z-index: 100;
+  opacity: 1;
+  transition: opacity 0.5s ease-in-out;
+  font-weight: bold;
+}
+
+.copy-notification.fade-out {
+  opacity: 0;
 }

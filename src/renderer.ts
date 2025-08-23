@@ -27,7 +27,6 @@ declare global {
 let activeDropdown: HTMLElement | null = null;
 
 const hideDropdowns = (event?: MouseEvent) => {
-    // If we have an event and it's coming from a menu button, don't hide
     if (event?.target instanceof Element && 
         (event.target.closest('.menu-button') || event.target.closest('.dropdown-menu'))) {
         return;
@@ -43,7 +42,8 @@ window.addEventListener('DOMContentLoaded', () => {
     const historyContainer = document.getElementById('history-container');
     const searchBox = document.getElementById('search-box') as HTMLInputElement;
 
-    if (!historyContainer || !searchBox) {
+    const clearSearchBtn = document.getElementById('clear-search-btn');
+    if (!historyContainer || !searchBox || !clearSearchBtn){
         console.error('Required DOM elements not found');
         return;
     }
@@ -51,7 +51,7 @@ window.addEventListener('DOMContentLoaded', () => {
   // Listen for input in the search box
   let fullHistory: HistoryItem[]= [];
 
-  const UpdatedView = () => {
+  const updateView = () => {
     const searchText = searchBox.value.toLowerCase();
 
     // if no search text show everything
@@ -63,11 +63,29 @@ window.addEventListener('DOMContentLoaded', () => {
     renderHistory(filteredHistory);
   };
 
-  searchBox.addEventListener('input', UpdatedView);
+  searchBox.addEventListener('input', () => {
+    // Show the clear button if there is text, otherwise hide it
+    if (searchBox.value) {
+        clearSearchBtn.classList.remove('hidden');
+    } else {
+        clearSearchBtn.classList.add('hidden');
+    }
+    updateView();
+});
+clearSearchBtn.addEventListener('click', () => {
+    // 1. Make the search box empty
+    searchBox.value = '';
+    // 2. Hide the clear button itself
+    clearSearchBtn.classList.add('hidden');
+    // 3. Put the user's cursor back in the search box
+    searchBox.focus();
+    // 4. Call your update function to show the full, unfiltered list
+    updateView();
+});
     window.electronAPI.onHistoryUpdate((history: HistoryItem[]) => {
         console.log('3. Renderer received history update.');
         fullHistory = history;
-        UpdatedView();
+        updateView();
     });
 
 
@@ -157,7 +175,7 @@ const renderHistory = (history: HistoryItem[]) => {
                     const emailIcon = document.createElement('span');
                     emailIcon.textContent = '📧email';
                     emailIcon.title = 'Contains an email';
-                    metadataContainer.appendChild(emailIcon);   
+                    metadataContainer.appendChild(emailIcon); 
                 }
             contentWrapper.appendChild(metadataContainer); // Append to wrapper
         }
@@ -167,8 +185,23 @@ const renderHistory = (history: HistoryItem[]) => {
         historyItem.appendChild(contentWrapper);
         
         contentWrapper.addEventListener('click', () => {
-            window.electronAPI.copyToClipboard(item.text);
-        });
+    window.electronAPI.copyToClipboard(item.text,);
+
+    // ---Show the "Copied!" notification ---
+    
+    const notification = document.createElement('div');
+    notification.className = 'copy-notification';
+    notification.textContent = 'Copied!';
+    document.body.appendChild(notification);
+
+    setTimeout(() => {
+        notification.classList.add('fade-out');
+    }, 1000); // Message stays visible for 1 second
+
+    setTimeout(() => {
+        notification.remove();
+    }, 1500); // 1s visible + 0.5s fade-out
+});
 
         historyContainer.appendChild(historyItem);
     });
@@ -184,12 +217,12 @@ document.body.addEventListener('click', hideDropdowns, true);
 
   window.electronAPI.onHistoryUpdate((history: HistoryItem[]) => {
     console.log('3. Renderer received history update.');
-    renderHistory(history);
+    updateView();
   });
 
   // Clean up when window unloads
   window.addEventListener('unload', () => {
-      document.removeEventListener('click', hideDropdowns);
-      searchBox?.removeEventListener('input', UpdatedView);
+      document.body.removeEventListener('click', hideDropdowns, true);
+      searchBox?.removeEventListener('input', updateView);
   });
 });
