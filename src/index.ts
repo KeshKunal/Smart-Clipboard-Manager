@@ -1,10 +1,21 @@
 // Radha Krishna
 import { app, BrowserWindow, clipboard, ipcMain } from 'electron';
-import { analyzeText, AnalysisResult } from './analysis';
+// import { analyzeText, AnalysisResult } from './analysis';
 import Store from 'electron-store';
 
 declare const MAIN_WINDOW_WEBPACK_ENTRY: string;
 declare const MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY: string;
+
+// AnylysisResult def
+type AnalysisResult = {
+  words: number;
+  characters: number;
+  hasUrl: boolean;
+  hasEmail: boolean;
+};
+
+let analysisModule: { analyzeText: (text: string) => Promise<AnalysisResult> } = null;
+
 
 if (require('electron-squirrel-startup')) {
   app.quit();
@@ -34,7 +45,7 @@ const createWindow = (): void => {
     webPreferences: {
       preload: MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY,
       contextIsolation: true,
-      nodeIntegration: false,
+      nodeIntegration: false, 
     },
   });
 
@@ -56,7 +67,13 @@ app.on('ready', () => {
     if (currentText.trim() !== '' && currentText !== lastCopiedText) {
       lastCopiedText = currentText;
 
-      analyzeText(currentText)
+    // Lazy load the module on first use
+    if (!analysisModule) 
+      {
+      analysisModule = require('./analysis');
+      }
+
+      analysisModule.analyzeText(currentText)
         .then(metadata => {
           const history = store.get('clipboardHistory');
           const newEntry = {
