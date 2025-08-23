@@ -1,9 +1,8 @@
-import { app, BrowserWindow, clipboard, ipcMain } from 'electron';
+import { app, BrowserWindow, clipboard, ipcMain , Tray, Menu} from 'electron';
 import path from 'path';
 import type Store from 'electron-store';
 import { Worker } from 'worker_threads';
 import { AnalysisResult } from './analysis';
-
 app.disableHardwareAcceleration();
 
 declare const MAIN_WINDOW_WEBPACK_ENTRY: string;
@@ -47,6 +46,7 @@ const sendHistoryToRenderer = (win: BrowserWindow) => {
   }
 };
 
+
 const createWindow = (): void => {
   mainWindow = new BrowserWindow({
     height: 600,
@@ -57,9 +57,28 @@ const createWindow = (): void => {
       nodeIntegration: false,
     },
   });
-  mainWindow.webContents.executeJavaScript('!window.gc && (window.gc = () => {})');
 
-  mainWindow.loadURL(MAIN_WINDOW_WEBPACK_ENTRY);
+  app.on('window-all-closed', () => {
+    // Do nothing. The app should stay active.
+});
+
+  // We store the app's URL in a variable to reuse it
+  const appUrl = MAIN_WINDOW_WEBPACK_ENTRY;
+  mainWindow.loadURL(appUrl);
+
+
+  // When the window loses focus (app is in the background)
+  mainWindow.on('blur', () => {
+    // Navigate to a blank page to free up renderer memory
+    mainWindow.loadURL('about:blank');
+  });
+
+  // When the window gains focus (user clicks back on the app)
+  mainWindow.on('focus', () => {
+    // Reload our application
+    mainWindow.loadURL(appUrl);
+  });
+
   mainWindow.webContents.openDevTools();
   
   mainWindow.webContents.on('did-finish-load', () => {
@@ -96,22 +115,10 @@ app.on('ready', () => {
     }
 });
 
-  // SEARCH
-  // ipcMain.on('search-in-page', (event, text) => {
-  //   const focusedWindow = BrowserWindow.getFocusedWindow();
-  //   if (focusedWindow) {
-  //     if (text) {
-  //       focusedWindow.webContents.findInPage(text);
-  //     } else {
-  //       focusedWindow.webContents.stopFindInPage('clearSelection');
-  //     }
-  //   }
-  // });
-
   // PIN
     ipcMain.on('toggle-pin-status', (event, timestamp) => {
         const history = getStore().get('clipboardHistory');
-        const item = history.find(i => i.timestamp === timestamp);
+        const item = history.find(i => i.timestamp === timestamp); 
         if (item) {
             item.isPinned = !item.isPinned; // Flip the boolean
         }
@@ -119,7 +126,7 @@ app.on('ready', () => {
         sendHistoryToRenderer(mainWindow); // Send update to UI
     });
 
-    // DELETE
+    // DELETE  
     ipcMain.on('delete-clip', (event, timestamp) => {
         let history = getStore().get('clipboardHistory');
         history = history.filter(i => i.timestamp !== timestamp); // Keep all items EXCEPT the one to delete
@@ -127,41 +134,41 @@ app.on('ready', () => {
         sendHistoryToRenderer(mainWindow); // Send update to UI
     });
 
+ // 1. Create the worker ONCE.
+  const worker = new Worker(path.join(__dirname, 'analysis.worker.js'));
+  
+  // 2. Set up its 'message' listener ONCE.
+  worker.on('message', (metadata: AnalysisResult) => {
+    const history = getStore().get('clipboardHistory');
+    // We get the text from lastCopiedText, which is updated in the interval
+    const newEntry = { text: lastCopiedText, timestamp: Date.now(), metadata: metadata };
+    history.unshift(newEntry);
+    if (history.length > 100) { history.pop(); }
+    getStore().set('clipboardHistory', history);
+
+    if (mainWindow) {
+      sendHistoryToRenderer(mainWindow);
+    }
+  });
+
+  // 3. Set up its 'error' listener ONCE.
+  worker.on('error', (err) => console.error(err));
+  
   let lastCopiedText = clipboard.readText();
   
+  // 4. The interval is now much simpler.
   setInterval(() => {
     const currentText = clipboard.readText();
     if (currentText.trim() !== '' && currentText !== lastCopiedText) {
       lastCopiedText = currentText;
 
-        const history = getStore().get('clipboardHistory');
-        if (history.length > 0 && history[0].text === currentText) {
-            return; // Exit if this is a duplicate of the most recent item
-        }
-      const textToAnalyze = currentText;
-
-      const worker = new Worker(path.join(__dirname, 'analysis.worker.js'));
-
-      worker.on('message', (metadata: AnalysisResult) => {
-        const history = getStore().get('clipboardHistory');
-        const newEntry = { 
-          text: textToAnalyze, 
-          timestamp: Date.now(),
-          metadata: metadata 
-        };
-        history.unshift(newEntry);
-        if (history.length > 100) { 
-          history.pop(); 
-        }
-        getStore().set('clipboardHistory', history);
-
-        if (mainWindow) {
-          sendHistoryToRenderer(mainWindow);
-        }
-      });
-
-      worker.on('error', (err) => console.error(err));
-      worker.postMessage(textToAnalyze);
+      const history = getStore().get('clipboardHistory');
+      if (history.length > 0 && history[0].text === currentText) {
+        return; 
+      }
+      
+      // It just SENDS A MESSAGE to the worker we already created.
+      worker.postMessage(currentText);
     }
   }, 1000);
 });
@@ -173,9 +180,10 @@ app.on('window-all-closed', () => {
 });
 
 app.on('activate', () => {
-  if (BrowserWindow.getAllWindows().length === 0) {
+  if (BrowserWindow.getAllWindows().length === 0) {    
     createWindow();
   }
-});
+});    
+
 
 

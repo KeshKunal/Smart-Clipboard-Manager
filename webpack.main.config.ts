@@ -2,6 +2,8 @@
 
 import type { Configuration } from 'webpack';
 import { rules } from './webpack.rules';
+const CopyWebpackPlugin = require('copy-webpack-plugin');
+const path = require('path');
 
 export const mainConfig: Configuration = {
   /**
@@ -16,6 +18,18 @@ export const mainConfig: Configuration = {
   module: {
     rules,
   },
+
+ plugins: [
+    new CopyWebpackPlugin({
+      patterns: [
+        {
+          from: path.resolve(__dirname, 'src', 'icon.png'),
+          to: path.resolve(__dirname, '.webpack/main'),
+        },
+      ],
+    }),
+  ],
+
   resolve: {
     extensions: ['.js', '.ts', '.jsx', '.tsx', '.css', '.json'],
   },
