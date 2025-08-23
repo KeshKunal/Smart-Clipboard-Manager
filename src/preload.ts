@@ -1,3 +1,4 @@
+import { timeStamp } from 'console';
 import { contextBridge, ipcRenderer } from 'electron';
 
 contextBridge.exposeInMainWorld('electronAPI', {
@@ -8,5 +9,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   copyToClipboard: (text: string) => ipcRenderer.send('copy-to-clipboard', text),
 
   //function to send search text
-  searchInPage: (text: string) => ipcRenderer.send('search-in-page', text),
+  // searchInPage: (text: string) => ipcRenderer.send('search-in-page', text),
+
+  togglePin: (timestamp: number) => ipcRenderer.send('toggle-pin-status', timestamp),
+
+  deleteClip: (timeStamp: number) => ipcRenderer.send('delete-clip', timeStamp),
 });

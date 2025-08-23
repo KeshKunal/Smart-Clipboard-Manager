@@ -20,18 +20,22 @@ h1 {
   background-color: #21252b;
   color: #abb2bf;
   border: 1px solid #3b4048;
-  border-radius: 4px;
+  border-radius: 6px;
 }
 
 .history-item {
   padding: 12px;
   margin-bottom: 8px;
   background-color: #3b4048;
-  border-radius: 5px;
+  border-radius: 10px;
   cursor: pointer;
   white-space: pre-wrap;
   word-wrap: break-word; 
   transition: background-color 0.2s ease-in-out;
+    display: flex; 
+  align-items: flex-start;
+  position: relative;  /* Ensure this is present */
+  padding-right: 40px; /* Make room for the menu button */
 }
 
 .history-item:hover {
@@ -53,4 +57,81 @@ h1 {
 
 .metadata-container span {
   display: inline-block;
+}
+
+
+/* Style for pinned items */
+.pinned {
+  border-left: 3px solid #b4b96d; /* A yellow highlight for pinned items */
+}
+
+.content-wrapper {
+  flex-grow: 1; 
+  cursor: pointer;
+}
+
+.menu-button {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: none;
+  border: none;
+  color: #abb2bf;
+  font-size: 1.2em;
+  padding: 4px 8px;
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+
+.menu-button:hover {
+  opacity: 1;
+}
+
+.dropdown-menu {
+    position: absolute;
+    right: 0;
+    top: 100%;
+    margin-top: 2px;
+    background-color: #21252b;
+    border: 1px solid #3b4048;
+    border-radius: 4px;
+    z-index: 10;
+    min-width: 100px;
+    box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-10px);
+    transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s;
+}
+
+.dropdown-menu.show {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+/* Add active state for menu button */
+.menu-button.active {
+    background-color: #3b4048;
+    opacity: 1;
+}
+
+.dropdown-menu button {
+  background: none;
+  border: none;
+  color: #abb2bf;
+  padding: 8px 12px;
+  text-align: left;
+  display: block;
+  width: 100%;
+  cursor: pointer;
+}
+
+.dropdown-menu button:hover {
+  background-color: #3b4048;
+}
+
+.history-item:hover .menu-button {
+  opacity: 1;
 }

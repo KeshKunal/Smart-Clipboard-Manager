@@ -6,6 +6,7 @@ import path from 'path';
 import type Store from 'electron-store';
 import { Worker } from 'worker_threads';
 import { AnalysisResult } from './analysis';
+import { timeStamp } from 'console';
 
 declare const MAIN_WINDOW_WEBPACK_ENTRY: string;
 declare const MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY: string;
@@ -21,7 +22,8 @@ type StoreSchema = {
   clipboardHistory: { 
     text: string; 
     timestamp: number; 
-    metadata?: AnalysisResult 
+    metadata?: AnalysisResult;
+    isPinned?: boolean;
   }[];
 };
 
@@ -73,10 +75,12 @@ const createWindow = (): void => {
 app.on('ready', () => {
   createWindow();
 
+  //  COPY
   ipcMain.on('copy-to-clipboard', (event, text) => {
     clipboard.writeText(text);
   });
 
+  // SEARCH
   ipcMain.on('search-in-page', (event, text) => {
     const focusedWindow = BrowserWindow.getFocusedWindow();
     if (focusedWindow) {
@@ -87,6 +91,25 @@ app.on('ready', () => {
       }
     }
   });
+
+  // PIN
+    // ipcMain.on('toggle-pin-status', (event, timestamp) => {
+    //     const history = getStore().get('clipboardHistory');
+    //     const item = history.find(i => i.timestamp === timestamp);
+    //     if (item) {
+    //         item.isPinned = !item.isPinned; // Flip the boolean
+    //     }
+    //     getStore().set('clipboardHistory', history);
+    //     sendHistoryToRenderer(mainWindow); // Send update to UI
+    // });
+
+    // DELETE
+    ipcMain.on('delete-clip', (event, timestamp) => {
+        let history = getStore().get('clipboardHistory');
+        history = history.filter(i => i.timestamp !== timestamp); // Keep all items EXCEPT the one to delete
+        getStore().set('clipboardHistory', history);
+        sendHistoryToRenderer(mainWindow); // Send update to UI
+    });
 
   let lastCopiedText = clipboard.readText();
   
