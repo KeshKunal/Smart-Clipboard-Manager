@@ -37,3 +37,20 @@ h1 {
 .history-item:hover {
   background-color: #4b515c;
 }
+
+.history-item-text {
+  margin-top: 0;
+  margin-bottom: 8px;
+}
+
+.metadata-container {
+  font-size: 0.8em;
+  color: #828a96;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.metadata-container span {
+  display: inline-block;
+}

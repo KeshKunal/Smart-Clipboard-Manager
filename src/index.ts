@@ -1,5 +1,6 @@
 // Radha Krishna
 import { app, BrowserWindow, clipboard, ipcMain } from 'electron';
+import { analyzeText, AnalysisResult } from './analysis';
 import Store from 'electron-store';
 
 declare const MAIN_WINDOW_WEBPACK_ENTRY: string;
@@ -10,7 +11,11 @@ if (require('electron-squirrel-startup')) {
 }
 
 type StoreSchema = {
-  clipboardHistory: { text: string; timestamp: number }[];
+  clipboardHistory: { 
+    text: string; 
+    timestamp: number;
+    metadata?: AnalysisResult;
+  }[];
 };
 
 const store = new Store<StoreSchema>({
@@ -51,18 +56,41 @@ app.on('ready', () => {
     if (currentText.trim() !== '' && currentText !== lastCopiedText) {
       lastCopiedText = currentText;
 
-      const history = store.get('clipboardHistory');
-      history.unshift({ text: currentText, timestamp: Date.now() });
-      if (history.length > 100) history.pop();
+      analyzeText(currentText)
+        .then(metadata => {
+          const history = store.get('clipboardHistory');
+          const newEntry = {
+            text: currentText,
+            timestamp: Date.now(),
+            metadata: metadata
+          };
 
-      store.set('clipboardHistory', history);
+          history.unshift(newEntry);
+          if (history.length > 100) {
+            history.pop();
+          }
 
-      const focusedWindow = BrowserWindow.getFocusedWindow();
-      if (focusedWindow) sendHistoryToRenderer(focusedWindow);
+          store.set('clipboardHistory', history);
+          
+          const focusedWindow = BrowserWindow.getFocusedWindow();    
+          if (focusedWindow) {
+            sendHistoryToRenderer(focusedWindow);
+          }
+        })
+        .catch(error => {
+          console.error('Error analyzing text:', error);
+          // Still save the entry even if analysis fails
+          const history = store.get('clipboardHistory');
+          history.unshift({
+            text: currentText,
+            timestamp: Date.now()
+          });
+          store.set('clipboardHistory', history);
+        });
     }
   }, 1000);
 
-  
+
 //   IPC Listener
   ipcMain.on('copy-to-clipboard', (event, text) => {
     clipboard.writeText(text);
