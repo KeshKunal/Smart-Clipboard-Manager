@@ -79,6 +79,7 @@ window.addEventListener('DOMContentLoaded', () => {
   };
 
   window.electronAPI.onHistoryUpdate((history: HistoryItem[]) => {
+    console.log('3. Renderer received history update.');
     renderHistory(history);
   });
 });         

@@ -1,114 +1,78 @@
 // Radha Krishna
 import { app, BrowserWindow, clipboard, ipcMain } from 'electron';
-// import { analyzeText, AnalysisResult } from './analysis';
-import Store from 'electron-store';
+import path from 'path';
+// import { AnalysisResult, analyzeText } from './analysis';
+// import Store from 'electron-store';
+import type Store from 'electron-store';
+import { Worker } from 'worker_threads';
+import { AnalysisResult } from './analysis';
 
 declare const MAIN_WINDOW_WEBPACK_ENTRY: string;
 declare const MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY: string;
-
-// AnylysisResult def
-type AnalysisResult = {
-  words: number;
-  characters: number;
-  hasUrl: boolean;
-  hasEmail: boolean;
-};
-
-let analysisModule: { analyzeText: (text: string) => Promise<AnalysisResult> } = null;
-
 
 if (require('electron-squirrel-startup')) {
   app.quit();
 }
 
+// --- Declare a variable to hold our main window ---
+let mainWindow: BrowserWindow | null = null;
+
 type StoreSchema = {
   clipboardHistory: { 
     text: string; 
-    timestamp: number;
-    metadata?: AnalysisResult;
+    timestamp: number; 
+    metadata?: AnalysisResult 
   }[];
 };
 
-const store = new Store<StoreSchema>({
-  defaults: { clipboardHistory: [] },
-});
+// Lazy loading implementation
+let store: Store<StoreSchema> | null = null;
+
+const getStore = () => {
+  if (store === null) {
+    const StoreClass = require('electron-store') as typeof Store;
+   
+    store = new StoreClass<StoreSchema>({
+      defaults: { clipboardHistory: [] },
+    });
+  }
+  return store;
+};
+
 
 const sendHistoryToRenderer = (win: BrowserWindow) => {
-  const history = store.get('clipboardHistory');
-  win.webContents.send('history-updated', history);
+  if (win) {
+    const history = getStore().get('clipboardHistory');
+    win.webContents.send('history-updated', history);
+  }
 };
 
 const createWindow = (): void => {
-  const mainWindow = new BrowserWindow({
+  mainWindow = new BrowserWindow({
     height: 600,
     width: 800,
     webPreferences: {
       preload: MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY,
       contextIsolation: true,
-      nodeIntegration: false, 
+      nodeIntegration: false,
     },
   });
 
   mainWindow.loadURL(MAIN_WINDOW_WEBPACK_ENTRY);
   mainWindow.webContents.openDevTools();
-
+  
   mainWindow.webContents.on('did-finish-load', () => {
     sendHistoryToRenderer(mainWindow);
+  });
+  
+  mainWindow.on('closed', () => {
+    mainWindow = null;
   });
 };
 
 app.on('ready', () => {
   createWindow();
 
-  let lastCopiedText = clipboard.readText();
-
-  setInterval(() => {
-    const currentText = clipboard.readText();
-    if (currentText.trim() !== '' && currentText !== lastCopiedText) {
-      lastCopiedText = currentText;
-
-    // Lazy load the module on first use
-    if (!analysisModule) 
-      {
-      analysisModule = require('./analysis');
-      }
-
-      analysisModule.analyzeText(currentText)
-        .then(metadata => {
-          const history = store.get('clipboardHistory');
-          const newEntry = {
-            text: currentText,
-            timestamp: Date.now(),
-            metadata: metadata
-          };
-
-          history.unshift(newEntry);
-          if (history.length > 100) {
-            history.pop();
-          }
-
-          store.set('clipboardHistory', history);
-          
-          const focusedWindow = BrowserWindow.getFocusedWindow();    
-          if (focusedWindow) {
-            sendHistoryToRenderer(focusedWindow);
-          }
-        })
-        .catch(error => {
-          console.error('Error analyzing text:', error);
-          // Still save the entry even if analysis fails
-          const history = store.get('clipboardHistory');
-          history.unshift({
-            text: currentText,
-            timestamp: Date.now()
-          });
-          store.set('clipboardHistory', history);
-        });
-    }
-  }, 1000);
-
-
-//   IPC Listener
   ipcMain.on('copy-to-clipboard', (event, text) => {
     clipboard.writeText(text);
   });
@@ -123,12 +87,49 @@ app.on('ready', () => {
       }
     }
   });
+
+  let lastCopiedText = clipboard.readText();
+  
+  setInterval(() => {
+    const currentText = clipboard.readText();
+    if (currentText.trim() !== '' && currentText !== lastCopiedText) {
+      lastCopiedText = currentText;
+      const textToAnalyze = currentText;
+
+      const worker = new Worker(path.join(__dirname, 'analysis.worker.js'));
+
+      worker.on('message', (metadata: AnalysisResult) => {
+        const history = getStore().get('clipboardHistory');
+        const newEntry = { 
+          text: textToAnalyze, 
+          timestamp: Date.now(),
+          metadata: metadata 
+        };
+        history.unshift(newEntry);
+        if (history.length > 100) { 
+          history.pop(); 
+        }
+        getStore().set('clipboardHistory', history);
+
+        if (mainWindow) {
+          sendHistoryToRenderer(mainWindow);
+        }
+      });
+
+      worker.on('error', (err) => console.error(err));
+      worker.postMessage(textToAnalyze);
+    }
+  }, 1000);
 });
 
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit();
+  if (process.platform !== 'darwin') {
+    app.quit();
+  }
 });
 
 app.on('activate', () => {
-  if (BrowserWindow.getAllWindows().length === 0) createWindow();
+  if (BrowserWindow.getAllWindows().length === 0) {
+    createWindow();
+  }
 });
