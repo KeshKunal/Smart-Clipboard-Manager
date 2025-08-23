@@ -6,8 +6,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('history-updated', (_event, history) => callback(history)),
 
   //function to send text to be copied
-  copyToClipboard: (text: string) => ipcRenderer.send('copy-to-clipboard', text),
-
+  copyToClipboard: (text: string, timestamp: number) => ipcRenderer.send('copy-to-clipboard', text, timestamp),
   //function to send search text
   // searchInPage: (text: string) => ipcRenderer.send('search-in-page', text),
 

@@ -48,6 +48,12 @@ window.addEventListener('DOMContentLoaded', () => {
         return;
     }
 
+    setInterval(() => {
+    if (window.gc) {
+        window.gc();
+    }
+}, 10000);
+
   // Listen for input in the search box
   let fullHistory: HistoryItem[]= [];
 
@@ -83,7 +89,6 @@ clearSearchBtn.addEventListener('click', () => {
     updateView();
 });
     window.electronAPI.onHistoryUpdate((history: HistoryItem[]) => {
-        console.log('3. Renderer received history update.');
         fullHistory = history;
         updateView();
     });
@@ -94,7 +99,10 @@ clearSearchBtn.addEventListener('click', () => {
 const renderHistory = (history: HistoryItem[]) => {
     history.sort((a, b) => (b.isPinned ? 1 : 0) - (a.isPinned ? 1 : 0));
 
-    historyContainer.innerHTML = ''; // Clear the existing list
+        // A more memory-efficient way to clear the container
+    while (historyContainer.firstChild) {
+        historyContainer.removeChild(historyContainer.firstChild);
+    }
 
     history.forEach((item) => {
         const historyItem = document.createElement('div');
@@ -185,7 +193,7 @@ const renderHistory = (history: HistoryItem[]) => {
         historyItem.appendChild(contentWrapper);
         
         contentWrapper.addEventListener('click', () => {
-    window.electronAPI.copyToClipboard(item.text,);
+    window.electronAPI.copyToClipboard(item.text);
 
     // ---Show the "Copied!" notification ---
     
@@ -216,7 +224,6 @@ document.body.addEventListener('click', hideDropdowns, true);
 
 
   window.electronAPI.onHistoryUpdate((history: HistoryItem[]) => {
-    console.log('3. Renderer received history update.');
     updateView();
   });
 

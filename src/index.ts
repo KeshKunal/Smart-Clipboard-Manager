@@ -4,6 +4,8 @@ import type Store from 'electron-store';
 import { Worker } from 'worker_threads';
 import { AnalysisResult } from './analysis';
 
+app.disableHardwareAcceleration();
+
 declare const MAIN_WINDOW_WEBPACK_ENTRY: string;
 declare const MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY: string;
 
@@ -55,6 +57,7 @@ const createWindow = (): void => {
       nodeIntegration: false,
     },
   });
+  mainWindow.webContents.executeJavaScript('!window.gc && (window.gc = () => {})');
 
   mainWindow.loadURL(MAIN_WINDOW_WEBPACK_ENTRY);
   mainWindow.webContents.openDevTools();
@@ -68,13 +71,30 @@ const createWindow = (): void => {
   });
 };
 
+app.commandLine.appendSwitch('in-process-gpu');
+
 app.on('ready', () => {
   createWindow();
 
   //  COPY
-  ipcMain.on('copy-to-clipboard', (event, text) => {
+ ipcMain.on('copy-to-clipboard', (event, text, timestamp) => {
+    // 1. Still copy the text to the OS clipboard
     clipboard.writeText(text);
-  });
+
+    // 2. Re-order the history 
+    let history = getStore().get('clipboardHistory');
+    const itemIndex = history.findIndex(i => i.timestamp === timestamp);
+
+    // If the item is found and not already at the top
+    if (itemIndex > 0) {
+        const [item] = history.splice(itemIndex, 1);
+        history.unshift(item);
+        getStore().set('clipboardHistory', history);
+        if (mainWindow) {
+            sendHistoryToRenderer(mainWindow);
+        }
+    }
+});
 
   // SEARCH
   // ipcMain.on('search-in-page', (event, text) => {
