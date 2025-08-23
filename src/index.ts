@@ -1,5 +1,5 @@
 // Radha Krishna
-import { app, BrowserWindow, clipboard } from 'electron';
+import { app, BrowserWindow, clipboard, ipcMain } from 'electron';
 import Store from 'electron-store';
 
 declare const MAIN_WINDOW_WEBPACK_ENTRY: string;
@@ -61,6 +61,23 @@ app.on('ready', () => {
       if (focusedWindow) sendHistoryToRenderer(focusedWindow);
     }
   }, 1000);
+
+  
+//   IPC Listener
+  ipcMain.on('copy-to-clipboard', (event, text) => {
+    clipboard.writeText(text);
+  });
+
+  ipcMain.on('search-in-page', (event, text) => {
+    const focusedWindow = BrowserWindow.getFocusedWindow();
+    if (focusedWindow) {
+      if (text) {
+        focusedWindow.webContents.findInPage(text);
+      } else {
+        focusedWindow.webContents.stopFindInPage('clearSelection');
+      }
+    }
+  });
 });
 
 app.on('window-all-closed', () => {

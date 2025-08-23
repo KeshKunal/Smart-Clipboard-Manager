@@ -7,5 +7,33 @@ body {
 }
 
 h1 {
-    color: #61afef;
+  color: #61afef;
+  text-align: center;
+}
+
+
+#search-box {
+  width: 100%;
+  padding: 8px;
+  margin-bottom: 15px;
+  box-sizing: border-box; /* Important for padding and width */
+  background-color: #21252b;
+  color: #abb2bf;
+  border: 1px solid #3b4048;
+  border-radius: 4px;
+}
+
+.history-item {
+  padding: 12px;
+  margin-bottom: 8px;
+  background-color: #3b4048;
+  border-radius: 5px;
+  cursor: pointer;
+  white-space: pre-wrap;
+  word-wrap: break-word; 
+  transition: background-color 0.2s ease-in-out;
+}
+
+.history-item:hover {
+  background-color: #4b515c;
 }

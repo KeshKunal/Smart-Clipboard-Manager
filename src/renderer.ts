@@ -1,22 +1,44 @@
-// 1. Import the CSS file so Webpack can bundle it.
 import './index.css';
 
-// Define the electronAPI object on the window for TypeScript
 declare global {
   interface Window {
     electronAPI: {
       onHistoryUpdate: (callback: (history: any[]) => void) => void;
+      copyToClipboard: (text: string) => void; // Add the new functions
+      searchInPage: (text: string) => void;   // to the type definition
     };
   }
 }
 
-// 2. Wait for the DOM to be fully loaded before running our script.
 window.addEventListener('DOMContentLoaded', () => {
-  console.log('Renderer is loaded and DOM is ready!');
+  const historyContainer = document.getElementById('history-container');
+  const searchBox = document.getElementById('search-box') as HTMLInputElement;
 
-  // Now that the DOM is ready, we can safely set up our listener.
+  // Listen for input in the search box
+  searchBox.addEventListener('input', (e) => {
+    window.electronAPI.searchInPage(searchBox.value);
+  });   
+
+  // The main function to render the history list
+  const renderHistory = (history: { text: string; timestamp: number }[]) => {
+    historyContainer.innerHTML = ''; // Clear the existing list
+
+    history.forEach(item => {
+      const historyItem = document.createElement('div');
+      historyItem.className = 'history-item';
+      historyItem.textContent = item.text; 
+
+      // Add click event for the "copy-back" feature
+      historyItem.addEventListener('click', () => {
+        window.electronAPI.copyToClipboard(item.text);
+      });
+
+      historyContainer.appendChild(historyItem);
+    });
+  };
+
+  // The listener now calls our render function instead of console.log
   window.electronAPI.onHistoryUpdate((history) => {
-    console.log('Received history from the main process:', history);
-    // In the next module, we'll render this data to the screen!
+    renderHistory(history);
   });
 });
