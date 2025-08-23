@@ -38,16 +38,28 @@ window.addEventListener('DOMContentLoaded', () => {
       const historyItem = document.createElement('div');
       historyItem.className = 'history-item';
 
-      const textContent = document.createElement('p');
+      // tooltip for hovering full content
+      historyItem.title = item.text;
+
+
+      const textContent = document.createElement('p');  
       textContent.className = 'history-item-text';
-      textContent.textContent = item.text;
+
+      const maxLength = 300;
+      let displayText = item.text;
+      if (displayText.length > maxLength)
+      {
+        displayText = displayText.substring(0, maxLength ) + " . . ."
+      }
+
+      textContent.textContent = displayText;
+
       historyItem.appendChild(textContent);
 
       if (item.metadata) {
         const metadataContainer = document.createElement('div');
         metadataContainer.className = 'metadata-container'; // Fixed typo: was 'metadate-container'
 
-        // Fixed: Using backticks instead of single quotes for string interpolation
         const stats = `${item.metadata.words} words, ${item.metadata.characters} chars`;
         
         const statsSpan = document.createElement('span');
