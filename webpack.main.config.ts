@@ -18,18 +18,16 @@ export const mainConfig: Configuration = {
   module: {
     rules,
   },
-
- plugins: [
+  plugins: [
     new CopyWebpackPlugin({
       patterns: [
         {
-          from: path.resolve(__dirname, 'src', 'icon.png'),
+          from: path.resolve(__dirname, 'src', 'icon.ico'), 
           to: path.resolve(__dirname, '.webpack/main'),
         },
       ],
     }),
   ],
-
   resolve: {
     extensions: ['.js', '.ts', '.jsx', '.tsx', '.css', '.json'],
   },

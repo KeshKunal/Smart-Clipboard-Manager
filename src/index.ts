@@ -1,4 +1,4 @@
-import { app, BrowserWindow, clipboard, ipcMain , Tray, Menu} from 'electron';
+import { app, BrowserWindow, clipboard, ipcMain} from 'electron';
 import path from 'path';
 import type Store from 'electron-store';
 import { Worker } from 'worker_threads';
@@ -51,16 +51,13 @@ const createWindow = (): void => {
   mainWindow = new BrowserWindow({
     height: 600,
     width: 800,
+    icon: path.join(__dirname, 'icon.ico'),
     webPreferences: {
       preload: MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY,
       contextIsolation: true,
       nodeIntegration: false,
     },
   });
-
-  app.on('window-all-closed', () => {
-    // Do nothing. The app should stay active.
-});
 
   // We store the app's URL in a variable to reuse it
   const appUrl = MAIN_WINDOW_WEBPACK_ENTRY;
@@ -79,7 +76,7 @@ const createWindow = (): void => {
     mainWindow.loadURL(appUrl);
   });
 
-  mainWindow.webContents.openDevTools();
+  // mainWindow.webContents.openDevTools();
   
   mainWindow.webContents.on('did-finish-load', () => {
     sendHistoryToRenderer(mainWindow);
@@ -171,6 +168,19 @@ app.on('ready', () => {
       worker.postMessage(currentText);
     }
   }, 1000);
+
+  // Add after window creation
+const monitorMemory = () => {
+  const used = process.memoryUsage();
+  console.log(`Memory usage: ${Math.round(used.heapUsed / 1024 / 1024)}MB`);
+  
+  if (used.heapUsed > 100 * 1024 * 1024) { // 100MB limit
+    console.warn('Memory usage high, triggering cleanup');
+    global.gc && global.gc();
+  }
+};
+
+setInterval(monitorMemory, 30000); // Check every 30 seconds
 });
 
 app.on('window-all-closed', () => {
@@ -183,7 +193,7 @@ app.on('activate', () => {
   if (BrowserWindow.getAllWindows().length === 0) {    
     createWindow();
   }
-});    
+});
 
 
 

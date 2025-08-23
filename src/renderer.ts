@@ -25,6 +25,8 @@ declare global {
   };
 
 let activeDropdown: HTMLElement | null = null;
+let fullHistory: HistoryItem[] | null = [];
+let cleanupInterval: NodeJS.Timeout;
 
 const hideDropdowns = (event?: MouseEvent) => {
     if (event?.target instanceof Element && 
@@ -66,8 +68,27 @@ window.addEventListener('DOMContentLoaded', () => {
       ? fullHistory.filter(item => item.text.toLowerCase().includes(searchText))
       : fullHistory;
 
-    renderHistory(filteredHistory);
+    const ITEMS_PER_PAGE = 20;  // Adjust based on your needs
+    const start = currentPage * ITEMS_PER_PAGE;
+    const end = start + ITEMS_PER_PAGE;
+    
+    // Use start and end to slice your history array
+    const itemsToShow = filteredHistory.slice(0, end);
+
+    renderHistory(itemsToShow);
   };
+
+  const debounce = (fn: Function, delay: number) => {
+    let timeoutId: NodeJS.Timeout;
+    return (...args: any[]) => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => fn(...args), delay);
+    };
+  };
+
+  const handleSearch = debounce((value: string) => {
+    // ...existing search code...
+  }, 300);
 
   searchBox.addEventListener('input', () => {
     // Show the clear button if there is text, otherwise hide it
@@ -94,17 +115,23 @@ clearSearchBtn.addEventListener('click', () => {
     });
 
 
+  const ITEMS_PER_PAGE = 20;
+  let currentPage = 0;
+
   // The main function to render the history list
 
 const renderHistory = (history: HistoryItem[]) => {
     history.sort((a, b) => (b.isPinned ? 1 : 0) - (a.isPinned ? 1 : 0));
 
+        const start = currentPage * ITEMS_PER_PAGE;
+        const end = start + ITEMS_PER_PAGE;
+        const visibleItems = history.slice(start, end);
         // A more memory-efficient way to clear the container
     while (historyContainer.firstChild) {
         historyContainer.removeChild(historyContainer.firstChild);
     }
 
-    history.forEach((item) => {
+    visibleItems.forEach((item) => {
         const historyItem = document.createElement('div');
         historyItem.className = 'history-item';
         if (item.isPinned) {
@@ -233,3 +260,18 @@ document.body.addEventListener('click', hideDropdowns, true);
       searchBox?.removeEventListener('input', updateView);
   });
 });
+
+// Keep the cleanupDOM function
+const cleanupDOM = () => {
+  const items = document.querySelectorAll('.history-item');
+  if (items.length > 100) {
+    for (let i = 100; i < items.length; i++) {
+      items[i].remove();
+    }
+  }
+};
+
+// Keep the interval
+setInterval(cleanupDOM, 60000);
+
+//# sourceMappingURL=index.js.map
